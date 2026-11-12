@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Risk-Aware Supply Delivery System</title>
+    <link rel="stylesheet" href="style.css">
+    <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+/>
+</head>
+<body>
+    <nav class="main-navigation">
+    <a href="#home">Home</a>
+    <a href="#route-planner">Route Planner</a>
+    <a href="#lpuMap">Live Map</a>
+    <a href="#risk-analysis">Risk Analysis</a>
+    <a href="#emergency-simulation">Emergency Simulation</a>
+    <a href="#chatbot">AI Assistant</a>
+    <a href="#about">About</a>
+</nav>
+
+    <header class="header">
+        <div>
+            <h1>RiskAware <span>AI</span></h1>
+            <p>Essential Supply Delivery & Route Planning</p>
+        </div>
+        <div class="status">
+            <span class="status-dot"></span>
+            <span id="serverStatus">Checking server...</span>
+        </div>
+    </header>
+
+    <main class="container">
+       <section class="welcome" id="home">
+            <div>
+                <p class="eyebrow">AI-POWERED DECISION SUPPORT</p>
+                <h2>Plan safer delivery routes.</h2>
+                <p>Predict road risks and find a safer route for essential supplies.</p>
+            </div>
+            <div class="welcome-icon">📦</div>
+        </section>
+
+        <!-- Emergency Alert Panel -->
+<section id="emergencyAlerts" class="panel">
+    <h3>🚨 Emergency Alert Center</h3>
+    <div id="emergencyAlertMessage">
+        <p>No active emergencies. All simulated roads are operating normally.</p>
+    </div>
+</section>
+
+
+<!-- FIELD REPORT SYSTEM -->
+<section id="field-reports" class="panel">
+
+    <h3>📋 Field Report System</h3>
+
+    <p>Report road conditions and emergency incidents.</p>
+
+    <form id="fieldReportForm">
+
+        <label for="reportType">Report Type</label>
+        <select id="reportType" required>
+            <option value="">Select Report Type</option>
+            <option value="Flood">Flood</option>
+            <option value="Accident">Accident</option>
+            <option value="Road Damage">Road Damage</option>
+            <option value="Road Blockage">Road Blockage</option>
+            <option value="Heavy Traffic">Heavy Traffic</option>
+        </select>
+
+
+<!-- VEHICLE TRACKING SYSTEM -->
+<section id="vehicle-tracking" class="panel">
+
+    <h3>🚚 Live Vehicle Tracking</h3>
+
+    <p>Monitor delivery vehicles and their current delivery status.</p>
+
+    <div class="vehicle-card">
+
+        <h4>Vehicle 1 – Essential Supply Van</h4>
+
+        <p>
+            <strong>Vehicle ID:</strong> VAN-001
+        </p>
+
+        <p>
+            <strong>Destination:</strong> Hospital
+        </p>
+
+        <p>
+            <strong>Status:</strong>
+            <span id="vehicleStatus">Waiting for delivery</span>
+        </p>
+
+        <div class="vehicle-progress">
+    <div class="progress-info">
+        <strong>Delivery Progress</strong>
+        <span id="vehicleProgressText">0%</span>
+    </div>
+
+    <div class="progress-track">
+        <div id="vehicleProgressBar"></div>
+    </div>
+</div>
+
+        <p>
+            <strong>Current Location:</strong>
+            <span id="vehicleLocation">Warehouse</span>
+        </p>
+
+        <p><strong>Next Stop:</strong> <span id="vehicleNextStop">A</span></p>
+
+<p><strong>Estimated Travel Time:</strong>
+    <span id="vehicleETA">Waiting for route</span>
+</p>
+
+        <button type="button" id="startTrackingBtn">
+            ▶ Start Vehicle Tracking
+        </button>
+
+        <button type="button" id="stopTrackingBtn">
+            ⏹ Stop Tracking
+        </button>
+
+    </div>
+
+</section>
+
+
+        <label for="reportRoadFrom">Road From</label>
+        <select id="reportRoadFrom" required>
+            <option value="">Select Starting Location</option>
+            <option value="Warehouse">Warehouse</option>
+            <option value="A">A</option>
+            <option value="B">B</option>
+            <option value="C">C</option>
+            <option value="D">D</option>
+        </select>
+
+        <label for="reportRoadTo">Road To</label>
+        <select id="reportRoadTo" required>
+            <option value="">Select Destination</option>
+            <option value="A">A</option>
+            <option value="B">B</option>
+            <option value="C">C</option>
+            <option value="D">D</option>
+            <option value="Hospital">Hospital</option>
+        </select>
+
+        <label for="reportDescription">Description</label>
+        <textarea
+            id="reportDescription"
+            placeholder="Describe the road condition..."
+            required
+        ></textarea>
+
+        <button type="submit">
+            Submit Field Report
+        </button>
+
+    </form>
+
+    <div id="fieldReportMessage"></div>
+
+    <h4>Submitted Reports</h4>
+    <div id="fieldReportList">
+        <p>No field reports submitted yet.</p>
+    </div>
+
+</section>
+
+
+        
+<!-- Dashboard Statistics -->
+<section class="stats-grid">
+
+    <div class="stat-card">
+        <div class="stat-icon">🛣️</div>
+        <div>
+            <p>Routes Evaluated</p>
+            <h2 id="routesEvaluated">0</h2>
+            <span>Available route options</span>
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-icon">🟢</div>
+        <div>
+            <p>Safe Routes</p>
+            <h2 id="safeRoutes">0</h2>
+            <span>Without safety warnings</span>
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-icon">⚠️</div>
+        <div>
+            <p>High-Risk Routes</p>
+            <h2 id="highRiskRoutes">0</h2>
+            <span>Require extra attention</span>
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-icon">📊</div>
+        <div>
+            <p>Average Risk Score</p>
+            <h2 id="averageRisk">--</h2>
+            <span>Across evaluated routes</span>
+        </div>
+    </div>
+
+</section>
+
+<!-- Analytics Dashboard -->
+<section class="analytics-grid">
+
+    <div class="panel chart-panel">
+        <h3>📈 Route Score Comparison</h3>
+        <p class="description">
+            Compare the scores of available routes.
+            Lower scores indicate a better route under the current model.
+        </p>
+        <div class="chart-container">
+            <canvas id="routeChart"></canvas>
+        </div>
+    </div>
+
+    <div class="panel chart-panel">
+        <h3>⚠️ Road Risk Distribution</h3>
+        <p class="description">
+            Distribution of road segments by predicted risk category.
+        </p>
+        <div class="chart-container">
+            <canvas id="riskChart"></canvas>
+        </div>
+    </div>
+
+</section>
+
+
+       <section class="dashboard-grid" id="route-planner">
+            <div class="panel">
+                <h3>🚚 Route Planner</h3>
+                <p class="description">Choose your starting point and destination.</p>
+
+                <label for="start">Starting Point</label>
+                <select id="start">
+                    <option value="Warehouse">Warehouse</option>
+                    <option value="A">Location A</option>
+                    <option value="B">Location B</option>
+                    <option value="C">Location C</option>
+                    <option value="D">Location D</option>
+                </select>
+
+                <label for="destination">Destination</label>
+                <select id="destination">
+                    <option value="Hospital">Hospital</option>
+                    <option value="A">Location A</option>
+                    <option value="B">Location B</option>
+                    <option value="C">Location C</option>
+                    <option value="D">Location D</option>
+                    <option value="Warehouse">Warehouse</option>
+                </select>
+
+                <!-- Emergency Simulation -->
+<label for="disruptionType" id="emergency-simulation">
+    Emergency Simulation (Optional)
+</label>
+<select id="disruptionType">
+    <option value="">No Emergency</option>
+    <option value="road_closure">Road Closure</option>
+    <option value="flood">Flood</option>
+    <option value="accident">Accident</option>
+    <option value="heavy_rainfall">Heavy Rainfall</option>
+</select>
+
+<label for="roadFrom">Affected Road – From</label>
+
+<select id="roadFrom">
+    <option value="Warehouse">Warehouse</option>
+    <option value="A">A</option>
+    <option value="B">B</option>
+    <option value="C">C</option>
+    <option value="D">D</option>
+</select>
+
+<label for="roadTo">Affected Road – To</label>
+
+<select id="roadTo">
+    <option value="Warehouse">Warehouse</option>
+    <option value="C">C</option>
+    <option value="D">D</option>
+    <option value="Hospital">Hospital</option>
+    <option value="A">A</option>
+    <option value="B">B</option>
+</select>
+
+<button id="routeButton" onclick="getBestRoute()">
+    Find Best Route
+</button>
+                <p id="routeMessage" class="message"></p>
+            </div>
+
+            <div class="panel">
+                <h3>⚠️ Road Risk Predictor</h3>
+                <p class="description">Enter road conditions to predict the risk level.</p>
+
+                <label for="rainfall">Rainfall (0–100)</label>
+                <input type="number" id="rainfall" min="0" max="100" value="80">
+
+                <label for="slope">Road Slope (0–100)</label>
+                <input type="number" id="slope" min="0" max="100" value="25">
+
+                <label for="roadCondition">Road Condition</label>
+                <select id="roadCondition">
+                    <option value="1">Good</option>
+                    <option value="2">Moderate</option>
+                    <option value="3" selected>Poor</option>
+                </select>
+
+                <label for="floodRisk">Flood Risk</label>
+                <select id="floodRisk">
+                    <option value="0">No</option>
+                    <option value="1" selected>Yes</option>
+                </select>
+
+                <label for="traffic">Traffic Level</label>
+                <select id="traffic">
+                    <option value="1">Low</option>
+                    <option value="2">Medium</option>
+                    <option value="3" selected>High</option>
+                </select>
+
+                <label for="incidents">Past Incidents</label>
+                <input type="number" id="incidents" min="0" value="4">
+
+                <button id="riskButton" onclick="predictRisk()">Predict Risk</button>
+                <p id="riskMessage" class="message"></p>
+            </div>
+        </section>
+
+        <!-- Interactive Road Network -->
+<section class="panel results-panel">
+    <h3>🗺️ Interactive Road Network</h3>
+    <p class="description">
+        Visual representation of the road network and AI-recommended route.
+    </p>
+
+    <div id="roadNetwork" class="road-network">
+        <p class="empty-state">
+            Find a route to display the road network.
+        </p>
+    </div>
+
+    <div class="map-legend">
+        <span><i class="legend-dot green"></i> Recommended Route</span>
+        <span><i class="legend-dot grey"></i> Other Roads</span>
+    </div>
+</section>
+
+    <!-- LPU Interactive Map -->
+<section class="panel results-panel map-section">
+    <h3>🗺️ LPU Interactive Delivery Map</h3>
+
+    <p class="description">
+        Explore the demo delivery network around Lovely Professional University, Phagwara.
+    </p>
+
+    <div id="lpuMap"></div>
+</section>
+
+        <section class="panel results-panel">
+            <h3>📍 Recommended Route</h3>
+            <p class="description">Your route planning results will appear here.</p>
+
+            <div id="routeResults" class="empty-state">
+                Select a starting point and destination, then click "Find Best Route".
+            </div>
+        </section>
+
+                <!-- Alternative Route Comparison -->
+        <section class="panel results-panel">
+            <h3>🔀 Alternative Route Comparison</h3>
+            <p class="description">
+                Compare available safe routes based on distance, time and AI risk score.
+            </p>
+
+            <div id="routeComparison" class="empty-state">
+                Find a route to compare available alternatives.
+            </div>
+        </section>
+
+        <section class="panel results-panel" id="risk-analysis">
+            <h3>🤖 AI Risk Prediction</h3>
+            <div id="riskResults" class="empty-state">
+                Enter road conditions and click "Predict Risk".
+            </div>
+        </section>
+
+        <!-- AI Chatbot -->
+<div class="chatbot-container" id="chatbot">
+    <!-- Floating Chat Button -->
+    <button id="chatbotToggle" class="chatbot-toggle">
+        🤖
+    </button>
+
+    <!-- Chat Window -->
+    <div id="chatbotWindow" class="chatbot-window hidden">
+
+        <div class="chatbot-header">
+            <div>
+                <h3>RiskAware AI Assistant</h3>
+                <span>Powered by Qwen AI</span>
+            </div>
+
+            <button id="closeChatbot" class="close-chat">
+                ×
+            </button>
+        </div>
+
+        <!-- Chat Messages -->
+        <div id="chatMessages" class="chat-messages">
+
+            <div class="bot-message">
+                Hello! 👋 I'm your AI assistant.
+                Ask me about route planning, road risks,
+                artificial intelligence, or anything else.
+            </div>
+
+        </div>
+
+        <!-- Chat Input -->
+        <div class="chatbot-input-area">
+
+            <input
+                type="text"
+                id="chatInput"
+                placeholder="Ask me anything..."
+                autocomplete="off"
+            >
+
+            <button id="sendChat" type="button">
+                ➤
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
+
+        <footer id="about">
+            <p>AI-Based Risk-Aware Essential Supply Delivery System | Academic Prototype</p>
+        </footer>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<!-- Leaflet Map Library -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<!-- Your JavaScript -->
+<script src="script.js"></script>
+
+</body>
+</html>
