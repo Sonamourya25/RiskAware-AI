@@ -369,9 +369,9 @@ footer {
 }
 
 
-/* =================================
+/* 
    RISK AWARE AI - ANALYTICS DESIGN
-================================= */
+ */
 
 .stats-grid {
     display: grid;
@@ -463,9 +463,9 @@ footer {
 }
 
 
-/* ==================================
+/* 
    LPU INTERACTIVE MAP
-================================== */
+ */
 
 .map-section {
     margin-top: 25px;
@@ -489,9 +489,9 @@ footer {
     }
 }
 
-/* ==============================
+/* 
    AI CHATBOT STYLING
-================================ */
+ */
 
 .chatbot-container {
     position: fixed;
@@ -706,9 +706,9 @@ label[id] {
 }
 
 
-/* =================================
+/* 
    RISKAWARE AI - UI UPGRADE
-================================= */
+ */
 
 :root {
     --primary: #2563eb;
@@ -995,9 +995,9 @@ footer {
     background: linear-gradient(90deg, #ef4444, #b91c1c) !important;
 }
 
-/* =========================================================
+/* 
    DELIVERY FAILED & REASON STYLES
-   ========================================================= */
+    */
 
 .status-failed {
     background: #fee2e2;
@@ -1118,9 +1118,9 @@ footer {
     margin-bottom: 6px;
 }
 
-/* =========================================================
+/* 
    HEADER RIGHT & USER AUTHENTICATION STYLES
-   ========================================================= */
+    */
 
 .header-right {
     display: flex;
@@ -1180,9 +1180,9 @@ footer {
     cursor: pointer;
 }
 
-/* =========================================================
+/* 
    TOAST NOTIFICATION SYSTEM
-   ========================================================= */
+    */
 
 .toast-container {
     position: fixed;
@@ -1273,9 +1273,9 @@ footer {
     }
 }
 
-/* =========================================================
+/* 
    LOGIN MODAL STYLES
-   ========================================================= */
+    */
 
 .modal-overlay {
     position: fixed;

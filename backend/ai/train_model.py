@@ -5,9 +5,8 @@ from sklearn.metrics import accuracy_score
 import joblib
 
 
-# -----------------------------
 # 1. Create training dataset
-# -----------------------------
+
 
 data = {
     "rainfall": [
@@ -64,9 +63,8 @@ data = {
 df = pd.DataFrame(data)
 
 
-# -----------------------------
 # 2. Separate features/target
-# -----------------------------
+
 
 X = df[
     [
@@ -82,9 +80,8 @@ X = df[
 y = df["risk"]
 
 
-# -----------------------------
 # 3. Split dataset
-# -----------------------------
+
 
 X_train, X_test, y_train, y_test = train_test_split(
     X,
@@ -94,9 +91,7 @@ X_train, X_test, y_train, y_test = train_test_split(
 )
 
 
-# -----------------------------
 # 4. Train Random Forest
-# -----------------------------
 
 model = RandomForestClassifier(
     n_estimators=100,
@@ -106,9 +101,8 @@ model = RandomForestClassifier(
 model.fit(X_train, y_train)
 
 
-# -----------------------------
 # 5. Test the model
-# -----------------------------
+
 
 predictions = model.predict(X_test)
 
@@ -118,9 +112,8 @@ print("Model trained successfully!")
 print("Model Accuracy:", round(accuracy * 100, 2), "%")
 
 
-# -----------------------------
 # 6. Save the trained model
-# -----------------------------
+
 
 joblib.dump(model, "risk_model.pkl")
 

@@ -6,10 +6,7 @@ import os
 
 from ai.rule_engine import apply_safety_rules
 
-
-# =========================================================
 # 1. LOAD TRAINED RANDOM FOREST MODEL
-# =========================================================
 
 MODEL_PATH = os.path.join(
     os.path.dirname(__file__),
@@ -20,10 +17,7 @@ model = joblib.load(MODEL_PATH)
 
 MAX_ACCEPTABLE_RISK = 70
 
-
-# =========================================================
 # 2. CREATE ROAD NETWORK
-# =========================================================
 
 def create_road_network():
 
@@ -104,9 +98,7 @@ def create_road_network():
     return graph
 
 
-# =========================================================
 # 3. EMERGENCY DISRUPTION SIMULATOR
-# =========================================================
 
 def apply_disruptions(graph, disruptions):
 
@@ -164,10 +156,7 @@ def apply_disruptions(graph, disruptions):
 
     return graph
 
-
-# =========================================================
 # 4. RANDOM FOREST RISK PREDICTION
-# =========================================================
 
 def predict_edge_risk(edge):
 
@@ -210,10 +199,7 @@ def predict_edge_risk(edge):
 
     return risk_scores.get(risk_value, 90)
 
-
-# =========================================================
 # 5. CALCULATE ROAD COST
-# =========================================================
 
 def calculate_road_cost(distance, time, risk, penalty):
 
@@ -226,10 +212,7 @@ def calculate_road_cost(distance, time, risk, penalty):
 
     return round(cost, 2)
 
-
-# =========================================================
 # 6. GOAL-BASED AGENT
-# =========================================================
 
 def goal_based_agent(start, destination, route):
 
@@ -265,10 +248,7 @@ def goal_based_agent(start, destination, route):
         )
     }
 
-
-# =========================================================
 # 6B. DELIVERY FAILURE DIAGNOSTIC ENGINE
-# =========================================================
 
 def diagnose_delivery_failure(graph, safe_graph, start, destination, disruptions):
     """
@@ -359,10 +339,7 @@ def diagnose_delivery_failure(graph, safe_graph, start, destination, disruptions
         "failed_routes": failed_routes
     }
 
-
-# =========================================================
 # 7. BUILD ROUTE DETAILS
-# =========================================================
 
 def build_route_details(graph, path, route_number):
 
@@ -418,9 +395,7 @@ def build_route_details(graph, path, route_number):
     }
 
 
-# =========================================================
 # 8. MAIN ROUTE FINDING FUNCTION
-# =========================================================
 
 def find_best_route(start, destination, disruptions=None):
 
@@ -453,9 +428,7 @@ def find_best_route(start, destination, disruptions=None):
             "error": f"Unknown destination: {destination}"
         }
 
-    # -----------------------------------------------------
     # STEP 1: ML RISK PREDICTION + SAFETY RULES
-    # -----------------------------------------------------
 
     for u, v, edge in graph.edges(data=True):
 
@@ -490,9 +463,8 @@ def find_best_route(start, destination, disruptions=None):
 
     print("Step 1 completed: ML and safety rules evaluated.")
 
-    # -----------------------------------------------------
+
     # STEP 2: BUILD SAFE ROUTE GRAPH
-    # -----------------------------------------------------
 
     safe_graph = graph.copy()
 
@@ -531,9 +503,9 @@ def find_best_route(start, destination, disruptions=None):
         for u, v, edge in graph.edges(data=True)
     ])
 
-    # -----------------------------------------------------
+
     # STEP 3: CHECK CONNECTIVITY
-    # -----------------------------------------------------
+
 
     if start == destination:
 
@@ -585,9 +557,9 @@ def find_best_route(start, destination, disruptions=None):
 
     print("Step 3 completed: A route exists.")
 
-    # -----------------------------------------------------
+
     # STEP 4: A* HEURISTIC
-    # -----------------------------------------------------
+
 
     distance_map = nx.single_source_dijkstra_path_length(
         safe_graph,
@@ -601,9 +573,9 @@ def find_best_route(start, destination, disruptions=None):
 
     print("Step 4 completed: Heuristic prepared.")
 
-    # -----------------------------------------------------
+
     # STEP 5: FIND BEST ROUTE USING A*
-    # -----------------------------------------------------
+
 
     try:
 
@@ -643,9 +615,9 @@ def find_best_route(start, destination, disruptions=None):
             "all_routes": []
         }
 
-    # -----------------------------------------------------
+
     # STEP 6: FIND UP TO 3 ALTERNATIVE ROUTES
-    # -----------------------------------------------------
+
 
     all_paths = []
 
@@ -678,9 +650,9 @@ def find_best_route(start, destination, disruptions=None):
 
     print("Step 6 completed: Alternative routes generated.")
 
-    # -----------------------------------------------------
+
     # STEP 7: BUILD ROUTE DETAILS
-    # -----------------------------------------------------
+
 
     route_results = []
 
@@ -696,9 +668,9 @@ def find_best_route(start, destination, disruptions=None):
 
     print("Step 7 completed: Route details calculated.")
 
-    # -----------------------------------------------------
+
     # STEP 8: SORT ROUTES BY COST
-    # -----------------------------------------------------
+
 
     route_results.sort(
         key=lambda route: route["route_score"]
@@ -711,9 +683,8 @@ def find_best_route(start, destination, disruptions=None):
 
     print("Step 8 completed: Routes ranked.")
 
-    # -----------------------------------------------------
     # STEP 9: SELECT RECOMMENDED ROUTE
-    # -----------------------------------------------------
+
 
     recommended_route = route_results[0]
 
@@ -722,9 +693,8 @@ def find_best_route(start, destination, disruptions=None):
         recommended_route["route"]
     )
 
-    # -----------------------------------------------------
     # STEP 10: GOAL-BASED AGENT DECISION
-    # -----------------------------------------------------
+    
 
     agent_decision = goal_based_agent(
         start,
@@ -734,9 +704,9 @@ def find_best_route(start, destination, disruptions=None):
 
     print("Step 10 completed: Agent decision generated.")
 
-    # -----------------------------------------------------
+    
     # FINAL RESPONSE
-    # -----------------------------------------------------
+    
 
     print("========== ROUTE CALCULATION COMPLETED ==========\n")
 

@@ -1,14 +1,14 @@
 let availableComparisonRoutes = [];
 
-// ============================================
+
 // RISK AWARE AI - FRONTEND JAVASCRIPT
-// ============================================
+
 
 const API_URL = "http://127.0.0.1:8000";
 
-// ============================================
+
 // CURRENT DASHBOARD CONTEXT FOR CHATBOT
-// ============================================
+
 
 let currentDashboardContext = {
     route_status: "Not calculated yet",
@@ -26,9 +26,9 @@ let currentDashboardContext = {
 };
 
 
-// ============================================
+
 // FLOATING TOAST NOTIFICATION SYSTEM
-// ============================================
+
 
 function showToast(title, message, type = "error") {
     const container = document.getElementById("toastContainer");
@@ -67,9 +67,8 @@ function showToast(title, message, type = "error") {
 }
 
 
-// ============================================
 // USER AUTHENTICATION & LOGIN MANAGEMENT
-// ============================================
+
 
 let currentUser = null;
 
@@ -173,9 +172,7 @@ function setupAuthEvents() {
 }
 
 
-// ============================================
 // CHECK BACKEND CONNECTION
-// ============================================
 
 async function checkServer() {
 
@@ -202,9 +199,7 @@ async function checkServer() {
 }
 
 
-// ============================================
 // FIND BEST ROUTE
-// ============================================
 
 function updateEmergencyAlert(disruptionType, roadFrom, roadTo) {
 
@@ -385,9 +380,8 @@ async function getBestRoute() {
         const data = await response.json();
 
 
-        // =====================================
         // HANDLE NO SAFE ROUTE / DELIVERY FAILED
-        // =====================================
+
 
         if (!response.ok || data.error || data.delivery_failed || data.delivery_status === "FAILED") {
 
@@ -551,9 +545,8 @@ async function getBestRoute() {
         }
 
 
-        // =====================================
         // HANDLE SUCCESSFUL ROUTE
-        // =====================================
+
 
         const route = data.recommended_route;
 
@@ -620,9 +613,9 @@ async function getBestRoute() {
 
         }
 
-        // =====================================
+
 // UPDATE VEHICLE TRACKING ROUTE
-// =====================================
+
 
 // Stop previous vehicle movement if running
 if (vehicleTimer !== null) {
@@ -685,9 +678,8 @@ lpuMap.panTo(lpuNodes[vehicleRoute[0]]);
         );
 
 
-        // =====================================
         // DISPLAY RECOMMENDED ROUTE
-        // =====================================
+
 
         results.innerHTML = `
 
@@ -1231,10 +1223,8 @@ function displayRouteComparison(routes) {
 }
 
 
-
-// =================================
 // ANALYTICS DASHBOARD
-// =================================
+
 
 let routeChartInstance = null;
 let riskChartInstance = null;
@@ -1430,9 +1420,8 @@ function resetAnalytics() {
 }
 
 
-// =====================================
 // LPU INTERACTIVE DELIVERY MAP
-// =====================================
+
 
 // Approximate LPU campus center
 const lpuCenter = [31.2559, 75.7033];
@@ -1509,9 +1498,7 @@ lpuMap.fitBounds(
 );
 
 
-// =====================================
 // UPDATE LPU MAP WITH AI ROUTE
-// =====================================
 
 
 function updateLpuMap(route, disruptionType, roadFrom, roadTo) {
@@ -1605,11 +1592,8 @@ function updateLpuMap(route, disruptionType, roadFrom, roadTo) {
 }
 
 
-
-
-// ==============================
 // AI CHATBOT FUNCTIONALITY
-// ==============================
+
 
 const chatbotToggle = document.getElementById("chatbotToggle");
 const chatbotWindow = document.getElementById("chatbotWindow");
@@ -1851,11 +1835,8 @@ fieldReportForm.reset();
 displayFieldReports();
 
 
-
-
-// =====================================
 // VEHICLE TRACKING SYSTEM
-// =====================================
+
 
 let vehicleTimer = null;
 let vehicleStep = 0;
