@@ -27,6 +27,153 @@ let currentDashboardContext = {
 
 
 // ============================================
+// FLOATING TOAST NOTIFICATION SYSTEM
+// ============================================
+
+function showToast(title, message, type = "error") {
+    const container = document.getElementById("toastContainer");
+    if (!container) return;
+
+    const toast = document.createElement("div");
+    toast.className = `toast toast-${type}`;
+
+    const icon = type === "error" ? "🚨" : (type === "warning" ? "⚠️" : "✅");
+
+    toast.innerHTML = `
+        <span class="toast-icon">${icon}</span>
+        <div class="toast-content">
+            <div class="toast-title">${title}</div>
+            <div class="toast-message">${message}</div>
+        </div>
+        <button class="toast-close" type="button" aria-label="Close">×</button>
+    `;
+
+    toast.querySelector(".toast-close").addEventListener("click", () => {
+        toast.style.opacity = "0";
+        toast.style.transform = "translateX(110%)";
+        setTimeout(() => toast.remove(), 300);
+    });
+
+    container.appendChild(toast);
+
+    // Auto remove after 7 seconds
+    setTimeout(() => {
+        if (toast.parentElement) {
+            toast.style.opacity = "0";
+            toast.style.transform = "translateX(110%)";
+            setTimeout(() => toast.remove(), 300);
+        }
+    }, 7000);
+}
+
+
+// ============================================
+// USER AUTHENTICATION & LOGIN MANAGEMENT
+// ============================================
+
+let currentUser = null;
+
+function initUserAuth() {
+    const saved = localStorage.getItem("riskAwareUser");
+    if (saved) {
+        try {
+            currentUser = JSON.parse(saved);
+        } catch (e) {
+            currentUser = null;
+        }
+    }
+    renderUserAuth();
+    setupAuthEvents();
+}
+
+function renderUserAuth() {
+    const section = document.getElementById("userAuthSection");
+    if (!section) return;
+
+    if (currentUser) {
+        section.innerHTML = `
+            <div class="user-profile">
+                <span class="user-badge">${currentUser.role}</span>
+                <span>${currentUser.name}</span>
+                <button id="logoutBtn" class="logout-link" type="button">Logout</button>
+            </div>
+        `;
+        const logoutBtn = document.getElementById("logoutBtn");
+        if (logoutBtn) {
+            logoutBtn.addEventListener("click", handleLogout);
+        }
+    } else {
+        section.innerHTML = `
+            <button id="loginBtn" class="login-header-btn" type="button">👤 Sign In</button>
+        `;
+        const loginBtn = document.getElementById("loginBtn");
+        if (loginBtn) {
+            loginBtn.addEventListener("click", openLoginModal);
+        }
+    }
+}
+
+function openLoginModal() {
+    const modal = document.getElementById("loginModal");
+    if (modal) modal.classList.remove("hidden");
+}
+
+function closeLoginModal() {
+    const modal = document.getElementById("loginModal");
+    if (modal) modal.classList.add("hidden");
+}
+
+function handleLogin(role, username) {
+    currentUser = {
+        name: username || "Operator",
+        role: role || "Delivery Driver",
+        timestamp: new Date().toISOString()
+    };
+    localStorage.setItem("riskAwareUser", JSON.stringify(currentUser));
+    renderUserAuth();
+    closeLoginModal();
+    showToast("👤 Welcome Back!", `Signed in as ${currentUser.name} (${currentUser.role})`, "success");
+}
+
+function handleLogout() {
+    currentUser = null;
+    localStorage.removeItem("riskAwareUser");
+    renderUserAuth();
+    showToast("Signed Out", "You have been logged out successfully.", "warning");
+}
+
+function setupAuthEvents() {
+    const closeBtn = document.getElementById("closeLoginModal");
+    if (closeBtn) closeBtn.addEventListener("click", closeLoginModal);
+
+    const modal = document.getElementById("loginModal");
+    if (modal) {
+        modal.addEventListener("click", (e) => {
+            if (e.target === modal) closeLoginModal();
+        });
+    }
+
+    const form = document.getElementById("loginForm");
+    if (form) {
+        form.addEventListener("submit", (e) => {
+            e.preventDefault();
+            const role = document.getElementById("loginRole").value;
+            const username = document.getElementById("loginUsername").value;
+            handleLogin(role, username);
+        });
+    }
+
+    document.querySelectorAll(".quick-role-btn").forEach(btn => {
+        btn.addEventListener("click", function () {
+            const role = this.dataset.role;
+            const user = this.dataset.user;
+            handleLogin(role, user);
+        });
+    });
+}
+
+
+// ============================================
 // CHECK BACKEND CONNECTION
 // ============================================
 
@@ -89,7 +236,13 @@ function updateEmergencyAlert(disruptionType, roadFrom, roadTo) {
             `⛔ ROAD CLOSURE: Road ${road} is marked as blocked and will be avoided.`,
 
         heavy_rainfall:
-            `🌧️ HEAVY RAINFALL WARNING: Road ${road} has increased weather-related risk. A safer alternative will be evaluated.`
+            `🌧️ HEAVY RAINFALL WARNING: Road ${road} has increased weather-related risk. A safer alternative will be evaluated.`,
+
+        total_blockage:
+            `🚨 SEVERE DISASTER ALERT: All regional corridors are completely blocked! Delivery cannot proceed safely.`,
+
+        destination_cutoff:
+            `🚨 CRITICAL ACCESS SEVERED: All road access into destination is completely cut off. Essential delivery is impossible.`
 
     };
 
@@ -112,10 +265,22 @@ async function getBestRoute() {
     const results = document.getElementById("routeResults");
 
     if (start === destination) {
+        const errorText = "Starting point and destination cannot be the same. Delivery cannot be scheduled.";
+        message.textContent = errorText;
+        showToast("⚠️ Delivery Failed – Route Not Available", errorText, "error");
 
-        message.textContent =
-            "Starting point and destination cannot be the same.";
-
+        results.innerHTML = `
+            <div class="delivery-failed-card">
+                <span class="delivery-failed-badge">❌ ROUTE NOT AVAILABLE — DELIVERY FAILED</span>
+                <h4>Delivery Route Planning Aborted</h4>
+                <div class="delivery-reason-box">
+                    <strong>Why Delivery Failed (Reason):</strong>
+                    <p>${errorText}</p>
+                </div>
+            </div>
+        `;
+        button.disabled = false;
+        button.textContent = "Find Best Route";
         return;
     }
 
@@ -193,7 +358,9 @@ async function getBestRoute() {
         // Add emergency parameters if selected
         if (disruptionType) {
 
-            if (roadFrom === roadTo) {
+            const isBroadDisruption = (disruptionType === "total_blockage" || disruptionType === "destination_cutoff");
+
+            if (roadFrom === roadTo && !isBroadDisruption) {
 
                 throw new Error(
                     "Affected road locations must be different."
@@ -203,9 +370,9 @@ async function getBestRoute() {
 
             params.append("disruption_type", disruptionType);
 
-            params.append("road_from", roadFrom);
+            params.append("road_from", roadFrom || "Warehouse");
 
-            params.append("road_to", roadTo);
+            params.append("road_to", disruptionType === "destination_cutoff" ? destination : roadTo);
 
         }
 
@@ -219,66 +386,58 @@ async function getBestRoute() {
 
 
         // =====================================
-        // HANDLE NO SAFE ROUTE
+        // HANDLE NO SAFE ROUTE / DELIVERY FAILED
         // =====================================
 
-        if (!response.ok || data.error) {
+        if (!response.ok || data.error || data.delivery_failed || data.delivery_status === "FAILED") {
 
-            const errorMessage =
+            const failureReason =
+                data.failure_reason ||
                 data.error ||
                 data.detail ||
-                "Unable to find route.";
+                "No safe route is available between these locations.";
 
+            // AUTOMATIC NOTIFICATION: Instantly alert user of delivery failure & reason
+            showToast("🚨 Delivery Failed – Route Not Available", failureReason, "error");
 
-            // Save latest failed route information
+            const failureDetails = data.failure_details || null;
+            const agent = data.agent_decision || {
+                goal: `Deliver essential supplies from ${start} to ${destination}`,
+                status: "DELIVERY_FAILED",
+                action: "ABORT_DELIVERY",
+                reason: failureReason
+            };
+
+            // Save latest failed route information for chatbot and dashboard
             currentDashboardContext = {
-
-                route_status: "No acceptable safe route available",
-
+                route_status: "Delivery Failed",
+                delivery_status: "FAILED",
+                failure_reason: failureReason,
                 start: start,
-
                 destination: destination,
-
                 emergency: disruptionType || "None",
-
                 affected_road: disruptionType
                     ? `${roadFrom} → ${roadTo}`
                     : null,
-
                 closed_road: disruptionType &&
                     disruptionType.toLowerCase().includes("clos")
                     ? `${roadFrom} → ${roadTo}`
                     : null,
-
                 recommended_route: null,
-
                 distance_km: null,
-
                 time_minutes: null,
-
                 risk_score: null,
-
                 route_score: null,
-
-                warnings: [errorMessage],
-
+                warnings: [failureReason],
                 chatbot_instruction:
-                    "The latest route calculation failed. Do not describe an older recommended route as current. State the affected road from affected_road or closed_road. If closed_road is present, identify it explicitly. Explain that no route met the backend safety rules."
-
+                    "The latest supply delivery calculation FAILED. Explicitly state that delivery failed and explain the failure reasons based on failure_reason, closed roads, and hazardous road segments."
             };
-
 
             // Reset dashboard analytics
             resetAnalytics();
 
-
-            // Clear previous route comparison
-            displayRouteComparison([]);
-
-
             // Clear previous road network
             drawRoadNetwork([]);
-
 
             // Update map to show disrupted road
             updateLpuMap(
@@ -288,38 +447,107 @@ async function getBestRoute() {
                 roadTo
             );
 
-
-            // Display error message
+            // 1. UPDATE RECOMMENDED ROUTE PANEL WITH 'DELIVERY FAILED' CARD
             results.innerHTML = `
+                <div class="delivery-failed-card">
+                    <span class="delivery-failed-badge">❌ ROUTE NOT AVAILABLE — DELIVERY FAILED</span>
+                    <h4>Essential Supply Delivery Aborted</h4>
 
-                <div class="warning">
+                    <div class="route-path" style="margin-bottom:12px;">
+                        <strong>Goal-Based Agent Decision:</strong><br>
+                        Goal: ${agent.goal}<br>
+                        Status: <span class="danger">${agent.status}</span><br>
+                        Action: <span class="danger">${agent.action}</span>
+                    </div>
 
-                    <strong>⚠️ Route Not Available</strong>
+                    <div class="delivery-reason-box">
+                        <strong>Why Delivery Failed (Reason):</strong>
+                        <p>${failureReason}</p>
+                    </div>
 
-                    <p>${errorMessage}</p>
+                    ${
+                        failureDetails && failureDetails.blocked_roads && failureDetails.blocked_roads.length
+                            ? `<div style="margin-top:12px;">
+                                <strong>Impassable / Blocked Corridors:</strong>
+                                <ul class="diagnostics-list">
+                                    ${failureDetails.blocked_roads.map(b => `<li>⛔ ${b.description}</li>`).join("")}
+                                </ul>
+                               </div>`
+                            : ""
+                    }
 
-                    <p>
-                        Please change your starting point,
-                        destination, or emergency conditions.
+                    ${
+                        failureDetails && failureDetails.high_risk_roads && failureDetails.high_risk_roads.length
+                            ? `<div style="margin-top:8px;">
+                                <strong>Hazardous Corridors (High Risk > 70%):</strong>
+                                <ul class="diagnostics-list">
+                                    ${failureDetails.high_risk_roads.map(r => `<li>⚠️ Road ${r.from} ↔ ${r.to} has extreme risk (${r.risk}/100)</li>`).join("")}
+                                </ul>
+                               </div>`
+                            : ""
+                    }
+
+                    <p style="margin-top:14px; font-size:13px; color:#64748b;">
+                        The AI Agent aborted delivery to protect vehicle cargo and transport personnel.
+                        Please clear road obstructions or select alternative hubs.
                     </p>
-
                 </div>
-
             `;
 
+            // 2. UPDATE ALTERNATIVE ROUTE COMPARISON TO SHOW FAILED ATTEMPTED ROUTES
+            const compContainer = document.getElementById("routeComparison");
+            if (failureDetails && failureDetails.failed_routes && failureDetails.failed_routes.length) {
+                compContainer.innerHTML = failureDetails.failed_routes.map((fr, idx) => `
+                    <div class="failed-route-card critical">
+                        <span class="failed-route-badge">❌ ROUTE ${idx} FAILED</span>
+                        <h4>Corridor Option ${idx}</h4>
+                        <div class="route-path">
+                            <strong>Evaluated Path:</strong><br>
+                            ${fr.path_string}
+                        </div>
+                        <div class="failed-route-cause">
+                            <strong>Why This Route Failed:</strong><br>
+                            ${fr.reason}
+                        </div>
+                    </div>
+                `).join("");
+            } else {
+                compContainer.innerHTML = `
+                    <div class="failed-route-card critical">
+                        <span class="failed-route-badge">❌ ALL CORRIDORS FAILED</span>
+                        <div class="failed-route-cause">
+                            <strong>Reason:</strong> No safe or passable route could connect ${start} to ${destination}. All connecting corridors are severed or hazardous.
+                        </div>
+                    </div>
+                `;
+            }
 
-            document.getElementById("routeComparison").innerHTML =
-                `<div class="empty-state">${errorMessage}</div>`;
+            // 3. UPDATE LIVE VEHICLE TRACKING PANEL TO REFLECT DELIVERY FAILED
+            if (vehicleTimer !== null) {
+                clearInterval(vehicleTimer);
+                vehicleTimer = null;
+            }
+            vehicleStatus.textContent = "Delivery Failed";
+            vehicleStatus.className = "status-failed";
 
+            const reasonBox = document.getElementById("vehicleFailureReason");
+            const reasonText = document.getElementById("vehicleFailureReasonText");
+            if (reasonBox && reasonText) {
+                reasonBox.style.display = "block";
+                reasonText.textContent = failureReason;
+            }
+
+            document.getElementById("vehicleETA").textContent = "Delivery Aborted";
+            document.getElementById("vehicleNextStop").textContent = "Blocked / Impassable";
+            document.getElementById("vehicleProgressBar").classList.add("failed");
+            document.getElementById("vehicleProgressBar").style.width = "100%";
+            document.getElementById("vehicleProgressText").textContent = "Aborted";
 
             document.getElementById("roadNetwork").innerHTML =
-                `<p class="empty-state">${errorMessage}</p>`;
+                `<div class="delivery-reason-box" style="margin:20px;"><strong>Road Network Impassable:</strong> ${failureReason}</div>`;
 
-
-            message.textContent = "No acceptable route found.";
-
+            message.textContent = "Delivery Failed: No acceptable route found.";
             return;
-
         }
 
 
@@ -377,6 +605,12 @@ async function getBestRoute() {
         // Display route comparison
         displayRouteComparison(data.all_routes);
 
+        // Notify user of successful route calculation
+        showToast(
+            "✅ Safest Route Found",
+            `Recommended Corridor: ${route.route.join(" → ")} (${route.distance_km} km | ETA: ${route.time_minutes} min)`,
+            "success"
+        );
 
         if (!route) {
 
@@ -404,15 +638,22 @@ vehicleEstimatedTime = route.time_minutes;
 document.getElementById("vehicleETA").textContent =
     vehicleEstimatedTime + " minutes";
 
-// Reset vehicle position
+// Reset vehicle position and status
 vehicleStep = 0;
 
 vehicleStatus.textContent = "Ready to start";
+vehicleStatus.className = "";
+
+// Hide failure reason if previously displayed
+const failureBox = document.getElementById("vehicleFailureReason");
+if (failureBox) failureBox.style.display = "none";
 
 vehicleLocation.textContent = vehicleRoute[0];
 
 // Reset delivery progress
-document.getElementById("vehicleProgressBar").style.width = "0%";
+const progressBar = document.getElementById("vehicleProgressBar");
+progressBar.classList.remove("failed");
+progressBar.style.width = "0%";
 
 document.getElementById("vehicleProgressText").textContent = "0%";
 
@@ -644,22 +885,22 @@ lpuMap.panTo(lpuNodes[vehicleRoute[0]]);
 
         chatHistory = [];
 
+        // Automatic notification for unexpected error
+        showToast("🚨 Delivery Failed – Route Not Available", error.message, "error");
 
         results.innerHTML = `
-
-            <div class="warning">
-
-                <strong>Route Error</strong>
-
-                <p>${error.message}</p>
-
+            <div class="delivery-failed-card">
+                <span class="delivery-failed-badge">❌ ROUTE NOT AVAILABLE — DELIVERY FAILED</span>
+                <h4>Delivery Calculation Aborted</h4>
+                <div class="delivery-reason-box">
+                    <strong>Why Delivery Failed (Reason):</strong>
+                    <p>${error.message}</p>
+                </div>
             </div>
-
         `;
 
-
         message.textContent =
-            "Could not calculate the route.";
+            "Delivery Failed: Could not calculate route.";
 
 
     } finally {
@@ -775,6 +1016,8 @@ async function predictRisk() {
 
 
 // Run when page loads
+initUserAuth();
+
 // Check backend connection when dashboard loads
 checkServer();
 
@@ -1646,7 +1889,19 @@ vehicleMarker.bindPopup("🚚 Vehicle VAN-001");
 // Start vehicle tracking
 startTrackingBtn.addEventListener("click", function () {
 
+    if (currentDashboardContext.delivery_status === "FAILED") {
+        const failureReason = currentDashboardContext.failure_reason || "No safe route exists.";
+        alert(`Cannot start tracking: Delivery has failed.\n\nReason: ${failureReason}`);
+        return;
+    }
+
     if (vehicleTimer !== null) return;
+
+    // Reset failure styles if starting
+    vehicleStatus.className = "";
+    const failureBox = document.getElementById("vehicleFailureReason");
+    if (failureBox) failureBox.style.display = "none";
+    document.getElementById("vehicleProgressBar").classList.remove("failed");
 
     if (vehicleStep >= vehicleRoute.length) {
         vehicleStep = 0;
@@ -1658,41 +1913,42 @@ startTrackingBtn.addEventListener("click", function () {
 
         const currentLocation = vehicleRoute[vehicleStep];
 
-// Update the location text
-vehicleLocation.textContent = currentLocation;
-// Calculate estimated remaining delivery time
-const totalStops = vehicleRoute.length - 1;
+        // Update the location text
+        vehicleLocation.textContent = currentLocation;
 
-const remainingTime = Math.ceil(
-    vehicleEstimatedTime *
-    (totalStops - vehicleStep) / totalStops
-);
+        // Calculate estimated remaining delivery time
+        const totalStops = vehicleRoute.length - 1;
 
-document.getElementById("vehicleETA").textContent =
-    remainingTime + " minutes remaining";
+        const remainingTime = Math.ceil(
+            vehicleEstimatedTime *
+            (totalStops - vehicleStep) / totalStops
+        );
 
-// Display the next delivery stop
-document.getElementById("vehicleNextStop").textContent =
-    vehicleRoute[vehicleStep + 1] || "Destination reached";
+        document.getElementById("vehicleETA").textContent =
+            remainingTime + " minutes remaining";
 
-// Update delivery progress
-const progress = Math.round(
-    (vehicleStep / (vehicleRoute.length - 1)) * 100
-);
+        // Display the next delivery stop
+        document.getElementById("vehicleNextStop").textContent =
+            vehicleRoute[vehicleStep + 1] || "Destination reached";
 
-document.getElementById("vehicleProgressBar").style.width =
-    progress + "%";
+        // Update delivery progress
+        const progress = Math.round(
+            (vehicleStep / (vehicleRoute.length - 1)) * 100
+        );
 
-document.getElementById("vehicleProgressText").textContent =
-    progress + "%";
+        document.getElementById("vehicleProgressBar").style.width =
+            progress + "%";
 
-// Move the vehicle marker on the map
-vehicleMarker.setLatLng(lpuNodes[currentLocation]);
+        document.getElementById("vehicleProgressText").textContent =
+            progress + "%";
 
-// Keep the moving vehicle visible
-lpuMap.panTo(lpuNodes[currentLocation]);
+        // Move the vehicle marker on the map
+        vehicleMarker.setLatLng(lpuNodes[currentLocation]);
 
-vehicleStep++;
+        // Keep the moving vehicle visible
+        lpuMap.panTo(lpuNodes[currentLocation]);
+
+        vehicleStep++;
 
         if (vehicleStep >= vehicleRoute.length) {
             clearInterval(vehicleTimer);
@@ -1701,9 +1957,9 @@ vehicleStep++;
             vehicleStatus.textContent = "Delivered";
             vehicleLocation.textContent = "Hospital";
             document.getElementById("vehicleETA").textContent =
-    "0 minutes remaining";
+                "0 minutes remaining";
             document.getElementById("vehicleNextStop").textContent =
-    "Completed";
+                "Completed";
         }
     }
 
@@ -1720,8 +1976,53 @@ stopTrackingBtn.addEventListener("click", function () {
         vehicleTimer = null;
     }
 
-    vehicleStatus.textContent = "Delayed";
+    vehicleStatus.textContent = "Delayed / Paused";
 });
+
+// Simulate route obstacle / Delivery failure button
+const failTrackingBtn = document.getElementById("failTrackingBtn");
+
+if (failTrackingBtn) {
+    failTrackingBtn.addEventListener("click", function () {
+
+        if (vehicleTimer !== null) {
+            clearInterval(vehicleTimer);
+            vehicleTimer = null;
+        }
+
+        const currentLoc = vehicleLocation.textContent || vehicleRoute[vehicleStep] || "En-Route";
+        const nextLoc = document.getElementById("vehicleNextStop").textContent || "Destination";
+        const failureReason = `Vehicle VAN-001 delivery failed near ${currentLoc} due to unexpected road damage and hazardous route blockage toward ${nextLoc}. Delivery aborted for vehicle safety.`;
+
+        vehicleStatus.textContent = "Delivery Failed";
+        vehicleStatus.className = "status-failed";
+
+        const reasonBox = document.getElementById("vehicleFailureReason");
+        const reasonText = document.getElementById("vehicleFailureReasonText");
+        if (reasonBox && reasonText) {
+            reasonBox.style.display = "block";
+            reasonText.textContent = failureReason;
+        }
+
+        document.getElementById("vehicleETA").textContent = "Delivery Aborted";
+        document.getElementById("vehicleNextStop").textContent = `Blocked at ${currentLoc}`;
+
+        const progressBar = document.getElementById("vehicleProgressBar");
+        progressBar.classList.add("failed");
+        document.getElementById("vehicleProgressText").textContent = "Aborted";
+
+        // Update emergency alert center
+        const alertBox = document.getElementById("emergencyAlertMessage");
+        if (alertBox) {
+            alertBox.classList.add("active-alert");
+            alertBox.textContent = `🚨 VEHICLE DELIVERY FAILURE: ${failureReason}`;
+        }
+
+        currentDashboardContext.route_status = "Delivery Failed En-Route";
+        currentDashboardContext.delivery_status = "FAILED";
+        currentDashboardContext.failure_reason = failureReason;
+    });
+}
 
 
 

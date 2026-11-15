@@ -112,7 +112,9 @@ def best_route(
             "road_closure",
             "flood",
             "accident",
-            "heavy_rainfall"
+            "heavy_rainfall",
+            "total_blockage",
+            "destination_cutoff"
         ]
 
         if disruption_type.lower() not in allowed_types:
@@ -167,8 +169,10 @@ def chat_with_ai(request: ChatRequest):
                 "Use CURRENT DASHBOARD INFORMATION when answering "
                 "questions about the user's latest route search. "
 
-                "If the current dashboard says no route is available, "
-                "clearly explain that no acceptable route was found. "
+                "If the current dashboard says delivery failed or no route is available, "
+                "clearly state that delivery failed and explain the exact failure reason, "
+                "referencing the affected roads, closed corridors, or safety hazards from CURRENT DASHBOARD INFORMATION. "
+                "Respond in the same language the user uses (English, Hindi, or Hinglish). "
 
                 "If no current route information is available, "
                 "say that the user should calculate a route first. "

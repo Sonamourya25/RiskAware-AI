@@ -113,6 +113,21 @@ def apply_disruptions(graph, disruptions):
     for event in disruptions:
 
         event_type = event.get("type", "").lower()
+
+        if event_type == "total_blockage":
+            for u, v in graph.edges():
+                graph[u][v]["blocked"] = True
+                graph[u][v]["disruption"] = "TOTAL_BLOCKAGE"
+            continue
+
+        if event_type == "destination_cutoff":
+            target = event.get("road_to")
+            for u, v in graph.edges():
+                if u == target or v == target:
+                    graph[u][v]["blocked"] = True
+                    graph[u][v]["disruption"] = "DESTINATION_CUTOFF"
+            continue
+
         road_from = event.get("road_from")
         road_to = event.get("road_to")
 
@@ -227,9 +242,9 @@ def goal_based_agent(start, destination, route):
 
         return {
             "goal": goal,
-            "status": "FAILED",
-            "action": "NO_ROUTE_AVAILABLE",
-            "reason": "No safe route was found."
+            "status": "DELIVERY_FAILED",
+            "action": "ABORT_DELIVERY",
+            "reason": "No safe route was found. Delivery aborted to protect vehicle and cargo."
         }
 
     warnings = route["warnings"]
@@ -248,6 +263,100 @@ def goal_based_agent(start, destination, route):
             "Route selected using A* Search, "
             "ML risk prediction and safety rules."
         )
+    }
+
+
+# =========================================================
+# 6B. DELIVERY FAILURE DIAGNOSTIC ENGINE
+# =========================================================
+
+def diagnose_delivery_failure(graph, safe_graph, start, destination, disruptions):
+    """
+    Analyzes all possible paths and obstacles in the road network to
+    diagnose precisely why delivery failed and provide human-readable reasons.
+    """
+    blocked_roads = []
+    for u, v, edge in graph.edges(data=True):
+        if edge.get("blocked", False) or edge.get("rule_decision") == "AVOID":
+            disruption_name = edge.get("disruption", "ROAD_CLOSED")
+            blocked_roads.append({
+                "from": u,
+                "to": v,
+                "disruption": disruption_name,
+                "description": f"Road {u} ↔ {v} is impassable ({disruption_name.replace('_', ' ')})"
+            })
+
+    high_risk_roads = []
+    for u, v, edge in graph.edges(data=True):
+        risk = edge.get("ai_risk_percent", 0)
+        if risk > MAX_ACCEPTABLE_RISK:
+            high_risk_roads.append({
+                "from": u,
+                "to": v,
+                "risk": risk,
+                "warnings": edge.get("warnings", [])
+            })
+
+    # Find all possible paths in the physical graph to explain why each alternative failed
+    failed_routes = []
+    try:
+        all_simple_paths = list(nx.all_simple_paths(graph, start, destination))
+    except Exception:
+        all_simple_paths = []
+
+    for idx, path in enumerate(all_simple_paths[:5], start=1):
+        causes = []
+        for i in range(len(path) - 1):
+            u = path[i]
+            v = path[i + 1]
+            if not safe_graph.has_edge(u, v):
+                edge_data = graph[u][v]
+                reason_tag = edge_data.get("disruption") or edge_data.get("rule_decision") or "BLOCKED"
+                causes.append(f"Road {u} → {v} is blocked ({reason_tag.replace('_', ' ')})")
+            elif safe_graph[u][v].get("ai_risk_percent", 0) > MAX_ACCEPTABLE_RISK:
+                causes.append(
+                    f"Road {u} → {v} exceeds safe risk threshold (AI Risk: {safe_graph[u][v]['ai_risk_percent']}/100)"
+                )
+
+        if not causes:
+            causes.append("Route blocked due to network partition or critical safety rule violation.")
+
+        failed_routes.append({
+            "route_id": idx,
+            "path": path,
+            "path_string": " → ".join(path),
+            "status": "DELIVERY_FAILED",
+            "reason": "; ".join(causes),
+            "causes": causes
+        })
+
+    # Determine primary failure reason
+    specific_reasons = []
+    if blocked_roads:
+        blocked_summary = ", ".join([f"{b['from']} ↔ {b['to']} ({b['disruption'].replace('_', ' ')})" for b in blocked_roads[:3]])
+        specific_reasons.append(f"Blocked road segments: {blocked_summary}")
+
+    if high_risk_roads:
+        risk_summary = ", ".join([f"{r['from']} ↔ {r['to']} (Risk: {r['risk']}%)" for r in high_risk_roads[:2]])
+        specific_reasons.append(f"Extreme risk segments exceeding safe limits: {risk_summary}")
+
+    if not all_simple_paths:
+        specific_reasons.append(f"No physical road path connects '{start}' and '{destination}' in the current road layout.")
+    elif failed_routes:
+        specific_reasons.append(f"All {len(failed_routes)} evaluated route corridors are impassable or violate delivery safety thresholds.")
+
+    summary_reason = (
+        f"Delivery Failed: Essential supplies cannot be safely delivered from {start} to {destination}. "
+        + " | ".join(specific_reasons)
+    )
+
+    return {
+        "summary_reason": summary_reason,
+        "start": start,
+        "destination": destination,
+        "blocked_roads": blocked_roads,
+        "high_risk_roads": high_risk_roads,
+        "failed_routes": failed_routes
     }
 
 
@@ -435,6 +544,8 @@ def find_best_route(start, destination, disruptions=None):
         recommended_route = route_results[0]
 
         return {
+            "delivery_status": "SUCCESSFUL",
+            "delivery_failed": False,
             "algorithm": "A* Search + K Shortest Simple Paths",
             "agent_decision": goal_based_agent(
                 start,
@@ -447,13 +558,29 @@ def find_best_route(start, destination, disruptions=None):
 
     if not nx.has_path(safe_graph, start, destination):
 
-        print("No connected route exists.")
+        print("No connected safe route exists.")
+        failure_diag = diagnose_delivery_failure(
+            graph,
+            safe_graph,
+            start,
+            destination,
+            disruptions
+        )
 
         return {
-            "error": (
-                "No safe route is available "
-                "between these locations."
-            )
+            "delivery_status": "FAILED",
+            "delivery_failed": True,
+            "error": failure_diag["summary_reason"],
+            "failure_reason": failure_diag["summary_reason"],
+            "failure_details": failure_diag,
+            "agent_decision": {
+                "goal": f"Deliver essential supplies from {start} to {destination}",
+                "status": "DELIVERY_FAILED",
+                "action": "ABORT_DELIVERY",
+                "reason": failure_diag["summary_reason"]
+            },
+            "recommended_route": None,
+            "all_routes": []
         }
 
     print("Step 3 completed: A route exists.")
@@ -492,11 +619,28 @@ def find_best_route(start, destination, disruptions=None):
 
     except nx.NetworkXNoPath:
 
+        failure_diag = diagnose_delivery_failure(
+            graph,
+            safe_graph,
+            start,
+            destination,
+            disruptions
+        )
+
         return {
-            "error": (
-                "No safe route is available "
-                "between these locations."
-            )
+            "delivery_status": "FAILED",
+            "delivery_failed": True,
+            "error": failure_diag["summary_reason"],
+            "failure_reason": failure_diag["summary_reason"],
+            "failure_details": failure_diag,
+            "agent_decision": {
+                "goal": f"Deliver essential supplies from {start} to {destination}",
+                "status": "DELIVERY_FAILED",
+                "action": "ABORT_DELIVERY",
+                "reason": failure_diag["summary_reason"]
+            },
+            "recommended_route": None,
+            "all_routes": []
         }
 
     # -----------------------------------------------------
@@ -525,12 +669,7 @@ def find_best_route(start, destination, disruptions=None):
 
     except nx.NetworkXNoPath:
 
-        return {
-            "error": (
-                "No safe route is available "
-                "between these locations."
-            )
-        }
+        all_paths = [best_path]
 
     # Ensure A* route is included.
     if best_path not in all_paths:
@@ -602,6 +741,8 @@ def find_best_route(start, destination, disruptions=None):
     print("========== ROUTE CALCULATION COMPLETED ==========\n")
 
     return {
+        "delivery_status": "SUCCESSFUL",
+        "delivery_failed": False,
         "algorithm": "A* Search + K Shortest Simple Paths",
         "agent_decision": agent_decision,
         "recommended_route": recommended_route,

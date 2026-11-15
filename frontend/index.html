@@ -11,6 +11,9 @@
 />
 </head>
 <body>
+    <!-- FLOATING TOAST NOTIFICATION CONTAINER -->
+    <div id="toastContainer" class="toast-container"></div>
+
     <nav class="main-navigation">
     <a href="#home">Home</a>
     <a href="#route-planner">Route Planner</a>
@@ -26,9 +29,14 @@
             <h1>RiskAware <span>AI</span></h1>
             <p>Essential Supply Delivery & Route Planning</p>
         </div>
-        <div class="status">
-            <span class="status-dot"></span>
-            <span id="serverStatus">Checking server...</span>
+        <div class="header-right">
+            <div class="status">
+                <span class="status-dot"></span>
+                <span id="serverStatus">Checking server...</span>
+            </div>
+            <div id="userAuthSection" class="auth-section">
+                <!-- User profile / login button inserted dynamically -->
+            </div>
         </div>
     </header>
 
@@ -95,6 +103,11 @@
             <span id="vehicleStatus">Waiting for delivery</span>
         </p>
 
+        <div id="vehicleFailureReason" class="delivery-failure-box" style="display: none;">
+            <strong>❌ Delivery Failure Reason:</strong>
+            <p id="vehicleFailureReasonText"></p>
+        </div>
+
         <div class="vehicle-progress">
     <div class="progress-info">
         <strong>Delivery Progress</strong>
@@ -117,13 +130,19 @@
     <span id="vehicleETA">Waiting for route</span>
 </p>
 
-        <button type="button" id="startTrackingBtn">
-            ▶ Start Vehicle Tracking
-        </button>
+        <div class="tracking-btn-group">
+            <button type="button" id="startTrackingBtn">
+                ▶ Start Vehicle Tracking
+            </button>
 
-        <button type="button" id="stopTrackingBtn">
-            ⏹ Stop Tracking
-        </button>
+            <button type="button" id="stopTrackingBtn">
+                ⏹ Pause Tracking
+            </button>
+
+            <button type="button" id="failTrackingBtn" class="fail-btn">
+                ⚠️ Simulate Obstacle / Fail Delivery
+            </button>
+        </div>
 
     </div>
 
@@ -272,7 +291,9 @@
 </label>
 <select id="disruptionType">
     <option value="">No Emergency</option>
-    <option value="road_closure">Road Closure</option>
+    <option value="road_closure">Road Closure (Specific Road)</option>
+    <option value="destination_cutoff">Destination Inaccessible (Cut off all roads to destination)</option>
+    <option value="total_blockage">Severe Regional Disaster (All Corridors Blocked)</option>
     <option value="flood">Flood</option>
     <option value="accident">Accident</option>
     <option value="heavy_rainfall">Heavy Rainfall</option>
@@ -457,6 +478,44 @@
             <p>AI-Based Risk-Aware Essential Supply Delivery System | Academic Prototype</p>
         </footer>
     </main>
+
+    <!-- USER LOGIN MODAL -->
+    <div id="loginModal" class="modal-overlay hidden">
+        <div class="modal-card">
+            <button id="closeLoginModal" class="modal-close" type="button" aria-label="Close">×</button>
+            <div class="modal-header">
+                <span class="modal-icon">🔐</span>
+                <h3>RiskAware System Login</h3>
+                <p>Sign in to access essential supply route dispatching</p>
+            </div>
+
+            <form id="loginForm">
+                <label for="loginRole">Select Your Role</label>
+                <select id="loginRole" required>
+                    <option value="Delivery Driver">🚚 Delivery Driver (VAN-001)</option>
+                    <option value="Hospital Dispatcher">🏥 Hospital Supply Dispatcher</option>
+                    <option value="Emergency Response Admin">🛡️ Emergency Response Admin</option>
+                </select>
+
+                <label for="loginUsername">Username / ID</label>
+                <input type="text" id="loginUsername" placeholder="e.g. driver_01" required value="driver_01">
+
+                <label for="loginPassword">Password</label>
+                <input type="password" id="loginPassword" placeholder="••••••••" required value="demo123">
+
+                <button type="submit" class="login-submit-btn">Sign In to Dashboard</button>
+            </form>
+
+            <div class="quick-login-hints">
+                <span>Quick 1-Click Demo Login:</span>
+                <div class="quick-login-buttons">
+                    <button type="button" class="quick-role-btn" data-role="Delivery Driver" data-user="VAN-001 Driver">🚚 Driver</button>
+                    <button type="button" class="quick-role-btn" data-role="Hospital Dispatcher" data-user="Civil Hospital Lead">🏥 Dispatcher</button>
+                    <button type="button" class="quick-role-btn" data-role="Emergency Response Admin" data-user="Admin Official">🛡️ Admin</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
